@@ -1,0 +1,15 @@
+.idea/
+gen/
+.DS_Store
+Pods/
+Podfile.lock
+xcuserdata/
+*.xcworkspace/
+GoogleService-Info.plist
+.gradle
+build
+*.iml
+.idea
+local.properties
+*-debug.log
+.firebaserc
