@@ -6,12 +6,13 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.firebase.ui.auth.AuthUI
+import com.firebase.ui.database.FirebaseRecyclerOptions
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.StorageReference
@@ -20,7 +21,9 @@ import com.google.firebase.codelab.friendlychat.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
+    private var _binding: ActivityMainBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var manager: LinearLayoutManager
     private lateinit var adapter: FriendlyMessageAdapter
 
@@ -35,32 +38,38 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
+        // usar emuladores em DEBUG
         if (BuildConfig.DEBUG) {
             Firebase.database.useEmulator("10.0.2.2", 9000)
             Firebase.auth.useEmulator("10.0.2.2", 9099)
             Firebase.storage.useEmulator("10.0.2.2", 9199)
         }
 
-        // 🔐 Auth + Redirecionamento caso não esteja logado
+        // inicializa auth
         auth = Firebase.auth
+
+        // Se não há usuário logado, redireciona para o SignIn.
         if (auth.currentUser == null) {
             startActivity(Intent(this, SignInActivity::class.java))
             finish()
             return
         }
 
+        // Se usuário logado, segue com a inicialização do chat.
+        _binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
         // 🔄 Configurar Realtime Database + RecyclerView
         db = Firebase.database
         val messagesRef = db.reference.child(MESSAGES_CHILD)
 
-        val options = com.firebase.ui.database.FirebaseRecyclerOptions.Builder<FriendlyMessage>()
+        val options = FirebaseRecyclerOptions.Builder<FriendlyMessage>()
             .setQuery(messagesRef, FriendlyMessage::class.java)
+            .setLifecycleOwner(this)
             .build()
 
-        adapter = FriendlyMessageAdapter(options, getUserName())
+        adapter = FriendlyMessageAdapter(options)
+
         binding.progressBar.visibility = ProgressBar.INVISIBLE
 
         manager = LinearLayoutManager(this)
@@ -93,22 +102,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (auth.currentUser == null) {
-            startActivity(Intent(this, SignInActivity::class.java))
-            finish()
-            return
-        }
-        adapter.startListening()
+        // O adapter.startListening() é chamado automaticamente pelo setLifecycleOwner
+        // se a atividade for a proprietária do ciclo de vida, então não é necessário aqui.
     }
 
-    override fun onResume() {
-        super.onResume()
-        adapter.startListening()
+    override fun onStop() {
+        super.onStop()
+        // O adapter.stopListening() é chamado automaticamente pelo setLifecycleOwner.
     }
 
-    override fun onPause() {
-        adapter.stopListening()
-        super.onPause()
+    override fun onDestroy() {
+        super.onDestroy()
+        _binding = null
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

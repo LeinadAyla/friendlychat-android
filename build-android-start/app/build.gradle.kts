@@ -1,17 +1,17 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    id("org.jetbrains.kotlin.android")
     id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.google.firebase.codelab.friendlychat"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.google.firebase.codelab.friendlychat"
         minSdk = 23
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -19,19 +19,25 @@ android {
 
     buildFeatures {
         viewBinding = true
+        dataBinding = true
     }
 
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
     packaging {
-        resources.excludes += "META-INF/LICENSE"
-        resources.excludes += "META-INF/LICENSE-FIREBASE.txt"
-        resources.excludes += "META-INF/NOTICE"
+        resources.excludes += setOf(
+            "META-INF/LICENSE",
+            "META-INF/LICENSE-FIREBASE.txt",
+            "META-INF/NOTICE"
+        )
     }
 
     compileOptions {
@@ -58,8 +64,8 @@ dependencies {
     // Google
     implementation("com.google.android.gms:play-services-auth:21.3.0")
 
-    // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
+    // Firebase BOM para gerenciar versões
+    implementation(platform("com.google.firebase:firebase-bom:33.6.0"))
     implementation("com.google.firebase:firebase-database")
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-auth")
@@ -68,9 +74,12 @@ dependencies {
     implementation("com.firebaseui:firebase-ui-auth:9.0.0")
     implementation("com.firebaseui:firebase-ui-database:9.0.0")
 
-    // Testing dependencies
+    // ExoPlayer - Adicionado para resolver o erro 'exoplayer2'
+    implementation("com.google.android.exoplayer:exoplayer:2.19.1")
+
+    // Testes
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:rules:1.6.1")

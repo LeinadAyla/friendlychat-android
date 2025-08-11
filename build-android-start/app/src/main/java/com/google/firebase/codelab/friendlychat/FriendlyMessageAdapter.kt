@@ -1,125 +1,71 @@
-/**
- * Copyright Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.google.firebase.codelab.friendlychat
 
-import android.graphics.Color
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.recyclerview.widget.RecyclerView.*
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.CircleCrop
 import com.firebase.ui.database.FirebaseRecyclerAdapter
 import com.firebase.ui.database.FirebaseRecyclerOptions
-import com.google.firebase.codelab.friendlychat.MainActivity.Companion.ANONYMOUS
-import com.google.firebase.codelab.friendlychat.databinding.ImageMessageBinding
-import com.google.firebase.codelab.friendlychat.databinding.MessageBinding
-import com.google.firebase.codelab.friendlychat.model.FriendlyMessage
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
+import com.google.firebase.codelab.friendlychat.databinding.ItemMessageBinding
 
-// The FirebaseRecyclerAdapter class and options come from the FirebaseUI library
-// See: https://github.com/firebase/FirebaseUI-Android
+/**
+ * Este adaptador utiliza a biblioteca FirebaseUI para se ligar aos dados do
+ * Firebase Realtime Database. Ele gerencia o ciclo de vida do listener de
+ * dados e as atualizações da UI automaticamente.
+ */
 class FriendlyMessageAdapter(
-    private val options: FirebaseRecyclerOptions<FriendlyMessage>,
-    private val currentUserName: String?
-) : FirebaseRecyclerAdapter<FriendlyMessage, ViewHolder>(options) {
+    private val options: FirebaseRecyclerOptions<FriendlyMessage>
+) : FirebaseRecyclerAdapter<FriendlyMessage, FriendlyMessageAdapter.MessageViewHolder>(options) {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == VIEW_TYPE_TEXT) {
-            val view = inflater.inflate(R.layout.message, parent, false)
-            val binding = MessageBinding.bind(view)
-            MessageViewHolder(binding)
-        } else {
-            val view = inflater.inflate(R.layout.image_message, parent, false)
-            val binding = ImageMessageBinding.bind(view)
-            ImageMessageViewHolder(binding)
-        }
-    }
+    /**
+     * O ViewHolder contém as referências às views para um único item de mensagem.
+     * Utiliza o View Binding para acessar as views de forma segura.
+     */
+    inner class MessageViewHolder(private val binding: ItemMessageBinding) :
+        RecyclerView.ViewHolder(binding.root) {
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int, model: FriendlyMessage) {
-        if (options.snapshots[position].text != null) {
-            (holder as MessageViewHolder).bind(model)
-        } else {
-            (holder as ImageMessageViewHolder).bind(model)
-        }
-    }
-
-    override fun getItemViewType(position: Int): Int {
-        return if (options.snapshots[position].text != null) VIEW_TYPE_TEXT else VIEW_TYPE_IMAGE
-    }
-
-    inner class MessageViewHolder(private val binding: MessageBinding) : ViewHolder(binding.root) {
-        fun bind(item: FriendlyMessage) {
-            // TODO: implement
-        }
-
-        private fun setTextColor(userName: String?, textView: TextView) {
-            if (userName != ANONYMOUS && currentUserName == userName && userName != null) {
-                textView.setBackgroundResource(R.drawable.rounded_message_blue)
-                textView.setTextColor(Color.WHITE)
-            } else {
-                textView.setBackgroundResource(R.drawable.rounded_message_gray)
-                textView.setTextColor(Color.BLACK)
+        fun bind(model: FriendlyMessage) {
+            // Se a mensagem contém texto, exibe o TextView e oculta o ImageView.
+            if (model.text != null) {
+                binding.messageTextView.text = model.text
+                binding.messageTextView.visibility = TextView.VISIBLE
+                binding.messageImageView.visibility = ImageView.GONE
             }
+            // Se a mensagem contém uma URL de imagem, carrega a imagem usando Glide e oculta o TextView.
+            else if (model.imageUrl != null) {
+                binding.messageTextView.visibility = TextView.GONE
+                binding.messageImageView.visibility = ImageView.VISIBLE
+                Glide.with(itemView.context)
+                    .load(model.imageUrl)
+                    .into(binding.messageImageView)
+            }
+            // Caso contrário, oculta ambas as views.
+            else {
+                binding.messageTextView.visibility = TextView.GONE
+                binding.messageImageView.visibility = ImageView.GONE
+            }
+
+            // Define o nome do remetente, usando a constante da classe MainActivity.
+            binding.messengerTextView.text = model.name ?: MainActivity.ANONYMOUS
         }
     }
 
-    inner class ImageMessageViewHolder(private val binding: ImageMessageBinding) :
-        ViewHolder(binding.root) {
-        fun bind(item: FriendlyMessage) {
-            // TODO: implement
-        }
+    /**
+     * Chamado para criar um novo ViewHolder.
+     */
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        val binding = ItemMessageBinding.inflate(inflater, parent, false)
+        return MessageViewHolder(binding)
     }
 
-    private fun loadImageIntoView(view: ImageView, url: String, isCircular: Boolean = true) {
-        if (url.startsWith("gs://")) {
-            val storageReference = Firebase.storage.getReferenceFromUrl(url)
-            storageReference.downloadUrl
-                .addOnSuccessListener { uri ->
-                    val downloadUrl = uri.toString()
-                    loadWithGlide(view, downloadUrl, isCircular)
-                }
-                .addOnFailureListener { e ->
-                    Log.w(
-                        TAG,
-                        "Getting download url was not successful.",
-                        e
-                    )
-                }
-        } else {
-            loadWithGlide(view, url, isCircular)
-        }
-    }
-
-    private fun loadWithGlide(view: ImageView, url: String, isCircular: Boolean = true) {
-        Glide.with(view.context).load(url).into(view)
-        var requestBuilder = Glide.with(view.context).load(url)
-        if (isCircular) {
-            requestBuilder = requestBuilder.transform(CircleCrop())
-        }
-        requestBuilder.into(view)
-    }
-
-    companion object {
-        const val TAG = "MessageAdapter"
-        const val VIEW_TYPE_TEXT = 1
-        const val VIEW_TYPE_IMAGE = 2
+    /**
+     * Chamado para ligar os dados de um objeto FriendlyMessage a um ViewHolder.
+     * A anotação `override` é essencial aqui.
+     */
+    override fun onBindViewHolder(holder: MessageViewHolder, position: Int, model: FriendlyMessage) {
+        holder.bind(model)
     }
 }

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:id="@+id/demo_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Demo Mode — App sem login"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:paddingBottom="18dp" />
+
+    <Button
+        android:id="@+id/demo_sign_in_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Entrar (Sign In)" />
+
+    <View android:layout_width="match_parent" android:layout_height="12dp" />
+
+    <Button
+        android:id="@+id/demo_open_example_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Abrir tela de exemplo" />
+
+</LinearLayout>
